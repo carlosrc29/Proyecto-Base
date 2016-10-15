@@ -1,10 +1,17 @@
+
 var url="http://127.0.0.1:1338/";
+var game;
 
-//funciones que modifican el index
-
+//Funciones que modifican el index
 
 function inicio(){
-	mostrarCabecera();
+	if ($.cookie("nombre")!=undefined)
+	{
+		comprobarUsuario();
+	}
+	else{
+		mostrarCabecera();
+	}
 }
 
 function borrarControl(){
@@ -13,33 +20,86 @@ function borrarControl(){
 
 function mostrarCabecera(){
 	$('#cabecera').remove();
-	$('#control').append('<div id="cabecera"><h2>Panel de Control</h2><input type="text" id="nombre" placeholder="Introduce tu nombre">');
+	$('#control').append('<p id="cabecera"><h2 id="cabeceraP">Panel de  Control</h2><input type="text" id="nombre" placeholder="introduce tu nombre"></p>');
 	botonNombre();
 }
 
-
-
 function botonNombre(){
-	$('#cabecera').append('<button type="button" id="nombreBtn" class="btn btn-primary">Medium</button>');
+	var nombre="";
+	$('#control').append('<button type="button" id="nombreBtn" class="btn btn-primary btn-md">Iniciar partida</button>');
 	$('#nombreBtn').on('click',function(){
-		$('#nombreBtn').remove();
-		crearUsuario($('#nombre').val());
-		
+		nombre=$('#nombre').val();
+		$('#nombre').remove();
+		$('#nombreBtn').remove();		
+		crearUsuario(nombre);
 	});
 }
 
+function mostrarInfoJugador(){
+	var nombre=$.cookie("nombre");
+	var id=$.cookie("id");
+	var nivel=$.cookie("nivel");
+	$('#datos').remove();
+	$('#cabeceraP').remove();
+	$('#cabecera').remove();
+	$('#control').append('<p id="cabecera"><h2>Panel</h2></p>')
+	$('#control').append('<div id="datos">Nombre: '+nombre+' Nivel: '+nivel+' Id:'+id+'</div>');
+	siguienteNivel();
+}
 
+function siguienteNivel(){
+	$('#control').append('<button type="button" id="siguienteBtn" class="btn btn-primary btn-md">Siguiente nivel</button>')
+	$('#siguienteBtn').on('click',function(){
+		$('#siguienteBtn').remove();
+		crearNivel($.cookie('nivel'));
+	});
+}
 
-//funciones de comunicacion
+function noHayNiveles(){
+	$('#control').append('<button type="button" id="siguienteBtn" class="btn btn-primary btn-md">Volver a empezar</button>')
+	$('#siguienteBtn').on('click',function(){
+		$('#siguienteBtn').remove();
+		//reset();
+	});
+}
 
-function crearUsuario(nomb){
-	if (nomb==""){
-		nomb="jugador";
+function reset(){
+	borrarCookies();
+	mostrarCabecera();
+}
+
+function borrarCookies(){
+	$.removeCookie("nombre");
+	$.removeCookie("id");
+	$.removeCookie("nivel");
+}
+
+//Funciones de comunicación con el servidor
+
+function crearUsuario(nombre){
+	if (nombre==""){
+		nombre="jugador";
 	}
 	$.getJSON(url+'crearUsuario/'+nombre,function(datos){
-		//datos tiene la respuestas del servidor
-		//mostrar datos del usuario
+		$.cookie('nombre',datos.nombre);
+		$.cookie('id',datos.id);
+		$.cookie('nivel',datos.nivel);
+		mostrarInfoJugador();
 	});
-
 	//mostrar datos
+}
+
+function comprobarUsuario(){
+	var id=$.cookie("id");
+
+	$.getJSON(url+'comprobarUsuario/'+id,function(datos){
+		if (datos.nivel<0){
+			borrarCookies();
+			mostrarCabecera();
+		}
+		else{
+			$.cookie("nivel",datos.nivel);
+			mostrarInfoJugador();
+		}
+	});
 }
