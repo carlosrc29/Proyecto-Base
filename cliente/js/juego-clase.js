@@ -4,10 +4,15 @@ var platforms;
 var cursors;
 var cielo;
 
-var stars;
+var Meteoritos;
 var score = 0;
 var scoreText;
+var timer;
+var tiempo=0;
+var tiempoText;
+
 var gameOverText;
+
 var maxNiveles=3;
 var ni;
 
@@ -29,7 +34,7 @@ function preload() {
         game.load.image('sky', 'assets/sky.png');
         game.load.image('ground', 'assets/platform.png');
         game.load.image('ground2', 'assets/platform2.png');
-        game.load.image('star', 'assets/asteroid1.png');
+        game.load.image('meteorito', 'assets/asteroid1.png');
         game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
         game.load.image('cielo','assets/heaven.png');
 }
@@ -37,6 +42,9 @@ function preload() {
 
 
 function create() {
+
+
+
 
         //  We're going to be using physics, so enable the Arcade Physics system
         game.physics.startSystem(Phaser.Physics.ARCADE);
@@ -97,33 +105,36 @@ function create() {
         player.animations.add('left', [0, 1, 2, 3], 10, true);
         player.animations.add('right', [5, 6, 7, 8], 10, true);
 
-        //  Finally some stars to collect
-        stars = game.add.group();
+        //  Finally some Meteoritos to collect
+        meteoritos = game.add.group();
 
-        //  We will enable physics for any star that is created in this group
-        stars.enableBody = true;
-        stars.physicsBodyType = Phaser.Physics.ARCADE;
+        //  We will enable physics for any Meteorito that is created in this group
+        meteoritos.enableBody = true;
+        meteoritos.physicsBodyType = Phaser.Physics.ARCADE;
         //  Here we'll create 12 of them evenly spaced apart
         for (var i = 0; i < 12; i++)
         {
             //  Create a star inside of the 'stars' group
-            var star = stars.create(i * 70, 0, 'star');
+            var meteorito = meteoritos.create(i * 70, 0, 'meteorito');
 
             //  Let gravity do its thing
-            star.body.gravity.y = 300;
+            meteorito.body.gravity.y = 50;
 
-            //  This just gives each star a slightly random bounce value
-           // star.body.bounce.y = 0.7 + Math.random() * 0.2;
+            //  This just gives each Meteorito a slightly random bounce value
+            //star.body.bounce.y = 0.7 + Math.random() * 0.2;
             //star.checkWorldBounds = true;
         }
 
         //  The score
         scoreText = game.add.text(16, 22, 'Vidas: 5', { fontSize: '32px', fill: '#000' });
 
-        //texto game over
+        tiempoText=game.add.text(game.world.width-170,22,'Tiempo:0',{ fontSize: '32px', fill: '#000' });
+        tiempo=0;
+        timer=game.time.events.loop(Phaser.Timer.SECOND,updateTiempo,this);
 
-        gameOverText = game.add.text(game.world.centerX,game.world.centerY,' ', { font: '84px Arial', fill: '#fff' });
-        gameOverText.anchor.setTo(0.5, 0.5);
+
+
+
         //  Our controls.
         cursors = game.input.keyboard.createCursorKeys();
         
@@ -134,17 +145,14 @@ function update() {
 
         //  Collide the player and the stars with the platforms
         game.physics.arcade.collide(player, platforms);
-        game.physics.arcade.collide(stars, platforms);//para que queden encima de las plataformas
+        //game.physics.arcade.collide(stars, platforms);
 
         //  Checks to see if the player overlaps with any of the stars, if he does call the collectStar function
-        game.physics.arcade.overlap(player, stars, collectStar, null, this);
+        game.physics.arcade.overlap(player, meteoritos, collectMeteorito, null, this);
 
         game.physics.arcade.overlap(player, cielo, terminaNivel, null, this);
 
-        game.physics.arcade.overlap(platforms,stars,muereEstrella,null,this);
-
-        //game.physics.arcade.overlap(player, stars, gameOver,null,this);
-        gameOver(player,stars);
+        game.physics.arcade.overlap(platforms,meteoritos,muereMeteorito,null,this);
 
         //  Reset the players velocity (movement)
         player.body.velocity.x = 0;
@@ -177,30 +185,43 @@ function update() {
             player.body.velocity.y = -350;
         }
 
-    }
+        gameOver(player,meteoritos);
 
-function collectStar (player, star) {       
-        // Removes the star from the screen
-        star.kill();
+}
+
+
+
+function lanzarMeteorito(){
+    var x=Math.floor(Math.random()*765+1);
+    var meteorito = meteoritos.create(x, 0, 'meteorito');
+    meteorito.body.gravity.y = 50;
+}
+
+
+function updateTiempo(){
+    tiempo++;
+    tiempoText.setText('Tiempo: '+tiempo);
+}
+
+function collectMeteorito (player, meteorito) {       
+        // Removes the Meteorito from the screen
+        meteorito.kill();
 
         //  Add and update the score
         player.vidas=player.vidas-1;
         scoreText.text = 'Vidas: ' + player.vidas;
-
-        /*if(player.vidas<0){
-        player.kill();
-        gameOverText.text=" GAME OVER ";
-        gameOverText.visible = true;
-    }
-
-    */ //puede venir aqui, pero mejor en otra funcion
-
-
+        if (player.vidas==0){
+            player.kill();
+            console.log("gameover")
+            game.time.events.remove(timer);
+        }
 }
 
-function gameOver(player, star){
-    if(player.vidas<0){
+function gameOver(player, meteorito){
+    if(player.vidas==0){
         player.kill();
+        gameOverText = game.add.text(game.world.centerX,game.world.centerY,' ', { font: '84px Arial', fill: '#fff' });
+        gameOverText.anchor.setTo(0.5, 0.5);
         gameOverText.text=" GAME OVER ";
         gameOverText.visible = true;
     }
@@ -208,10 +229,13 @@ function gameOver(player, star){
 
 function terminaNivel(player,final){
     // llamar a nivelCompletado y pasar tiempo y vidas
-    console.log("Nivel completado");
+    //console.log("Nivel completado");
     player.kill();
+    game.time.events.remove(timer);
+    nivelCompletado(tiempo);
 }
 
-function muereEstrella(platform,star){
-    star.kill();
+function muereMeteorito(platform,meteorito){
+    meteorito.kill();
+    lanzarMeteorito();
 }
